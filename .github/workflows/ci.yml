@@ -1,0 +1,103 @@
+name: ANSHIILY Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter-ci:
+    name: Flutter Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Verify Code Formatting
+        run: dart format --output=none --set-exit-if-changed lib/ test/
+
+      - name: Static Code Analysis
+        run: flutter analyze
+
+      - name: Run Test Suite
+        run: flutter test
+
+  admin-ci:
+    name: Next.js Admin Build & Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'admin/package-lock.json'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: ESLint Code Inspection
+        run: npm run lint
+
+      - name: Next.js Production Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "https://wwfhoogtnwyavyvuabbw.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_uJ2Mq_atmAoIjHuotMi1-A_AxNmxMD3"
+
+  security-audit:
+    name: Security & Secret Leakage Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Audit Repository for Secret Leaks
+        run: |
+          echo "Scanning tracked codebase for unauthorized production secrets..."
+          
+          # Check for Supabase service_role keys
+          if grep -rnEI 'service_role_key|service_role\s*=\s*["'"'"'][a-zA-Z0-9_\-\.]{20,}' --exclude-dir={.git,node_modules,.next,build,.github} .; then
+            echo "::error::Found potential Supabase service_role key leak!"
+            exit 1
+          fi
+
+          # Check for live OpenAI secret keys
+          if grep -rnEI 'sk-proj-[a-zA-Z0-9_\-]{30,}|sk-[a-zA-Z0-9]{40,}' --exclude-dir={.git,node_modules,.next,build,.github} .; then
+            echo "::error::Found potential live OpenAI secret key leak!"
+            exit 1
+          fi
+
+          # Check for private RSA / OpenSSH keys
+          if grep -rnEI 'BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY' --exclude-dir={.git,node_modules,.next,build,.github} .; then
+            echo "::error::Found private cryptographic key file!"
+            exit 1
+          fi
+
+          echo "Secret audit passed cleanly: No high-risk credentials detected in repository."
