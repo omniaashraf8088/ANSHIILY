@@ -1,0 +1,14 @@
+# ==============================================================================
+# ANSHIILY Android Release Signing Configuration Template
+# ==============================================================================
+# Instructions:
+# 1. Generate your release keystore using keytool:
+#    keytool -genkey -v -keystore anshiily-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias anshiily
+# 2. Copy this file to: android/key.properties (DO NOT COMMIT key.properties to Git)
+# 3. Fill in your secure keystore path and passwords below:
+# ==============================================================================
+
+keyAlias=anshiily
+keyPassword=your_secure_key_password_here
+storeFile=../anshiily-release-key.jks
+storePassword=your_secure_keystore_password_here

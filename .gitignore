@@ -50,6 +50,10 @@ app.*.map.json
 !.env.example
 admin/.env*
 !admin/.env.example
+key.properties
+**/key.properties
+!key.properties.example
+!**/key.properties.example
 
 # Native credentials & keystores
 *.keystore

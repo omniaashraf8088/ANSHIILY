@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يتطلب تطبيق أنشئلي الوصول لمعرض الصور لحفظ وتحميل تصاميمك المبتكرة / ANSHIILY requires access to your photo library to save and import your graphic designs.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>يتطلب تطبيق أنشئلي الإذن لحفظ التصاميم المصدرة في ألبوم الصور / ANSHIILY needs permission to save exported designs to your photo album.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -1,4 +1,4 @@
-package com.example.anshiily
+package com.anshiily.app
 
 import io.flutter.embedding.android.FlutterActivity
 
