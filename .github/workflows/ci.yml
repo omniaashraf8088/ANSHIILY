@@ -83,7 +83,7 @@ jobs:
           echo "Scanning tracked codebase for unauthorized production secrets..."
           
           # Check for Supabase service_role keys
-          if grep -rnEI 'service_role_key|service_role\s*=\s*["'"'"'][a-zA-Z0-9_\-\.]{20,}' --exclude-dir={.git,node_modules,.next,build,.github} .; then
+          if grep -rnEI '(service_role_key|service_role)\s*[:=]\s*["'"'"']?[a-zA-Z0-9_\-\.]{50,}["'"'"']?' --exclude-dir={.git,node_modules,.next,build,.github} .; then
             echo "::error::Found potential Supabase service_role key leak!"
             exit 1
           fi

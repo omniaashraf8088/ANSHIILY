@@ -30,11 +30,38 @@ class StorageService {
             fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
           );
 
-      final publicUrl = client.storage.from(designsBucket).getPublicUrl(path);
-      return publicUrl;
+      // Generate a secure signed URL for private bucket access (24 hour expiration)
+      try {
+        final signedUrl = await client.storage
+            .from(designsBucket)
+            .createSignedUrl(path, 60 * 60 * 24);
+        return signedUrl;
+      } catch (_) {
+        return client.storage.from(designsBucket).getPublicUrl(path);
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Storage upload warning: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Create an authenticated signed URL for a private design object
+  Future<String?> getDesignSignedUrl(
+    String path, {
+    int expiresIn = 86400,
+  }) async {
+    final client = _client;
+    if (client == null) return null;
+    try {
+      final signedUrl = await client.storage
+          .from(designsBucket)
+          .createSignedUrl(path, expiresIn);
+      return signedUrl;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error creating signed URL for design: $e');
       }
       return null;
     }

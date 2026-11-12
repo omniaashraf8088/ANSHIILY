@@ -31,19 +31,31 @@ $$;
 -- 2. Create Canonical Storage Buckets (6 Buckets)
 INSERT INTO storage.buckets (id, name, public)
 VALUES 
-    ('designs', 'designs', true),
+    ('designs', 'designs', false),
     ('avatars', 'avatars', true),
     ('templates', 'templates', true),
     ('project-previews', 'project-previews', true),
     ('user-uploads', 'user-uploads', false),
     ('exported-designs', 'exported-designs', false)
-ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
+ON CONFLICT (id) DO NOTHING;
 
--- 3. Storage RLS Policies (Clean, Idempotent, No Silent Error Suppression)
--- A. Public Buckets Read Policies
+-- 3. Storage RLS Policies (Clean, Idempotent, Folder-Isolated)
+-- A. Public Buckets Read Policies (Only templates, project-previews, avatars)
 DROP POLICY IF EXISTS "Public can view designs" ON storage.objects;
-CREATE POLICY "Public can view designs" ON storage.objects
-    FOR SELECT USING (bucket_id = 'designs');
+
+DROP POLICY IF EXISTS "Users can view their own designs" ON storage.objects;
+CREATE POLICY "Users can view their own designs" ON storage.objects
+    FOR SELECT TO authenticated
+    USING (
+        bucket_id = 'designs' 
+        AND (
+            (storage.foldername(name))[1] = auth.uid()::text
+            OR EXISTS (
+                SELECT 1 FROM public.admin_users 
+                WHERE id = auth.uid() AND is_active = true
+            )
+        )
+    );
 
 DROP POLICY IF EXISTS "Public can view avatars" ON storage.objects;
 CREATE POLICY "Public can view avatars" ON storage.objects
@@ -178,9 +190,12 @@ CREATE POLICY "Admins can view audit logs" ON public.system_audit_logs
     USING (public.check_is_admin(auth.uid()));
 
 DROP POLICY IF EXISTS "Authenticated users can write audit logs" ON public.system_audit_logs;
-CREATE POLICY "Authenticated users can write audit logs" ON public.system_audit_logs
+CREATE POLICY "Only verified admins can insert audit logs" ON public.system_audit_logs
     FOR INSERT TO authenticated
-    WITH CHECK (auth.uid() = actor_id);
+    WITH CHECK (
+        public.check_is_admin(auth.uid()) 
+        AND auth.uid() = actor_id
+    );
 
 -- 6. Categories & Templates Admin Management Policies
 DROP POLICY IF EXISTS "Admins can insert categories" ON public.design_categories;

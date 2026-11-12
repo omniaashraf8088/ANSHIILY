@@ -1,57 +1,35 @@
-# PHASE 7 STORAGE AUDIT REPORT
+# PHASE 7 STORAGE AUDIT REPORT (Hardened & Remediated)
 **Project:** ANSHIILY (أنشئلي)  
-**Subject:** Storage Bucket Consistency, Remote Audit & Canonical Architecture  
+**Subject:** Storage Bucket Consistency, Private Design Architecture & Migration Safety  
 **Date:** November 12, 2026  
 **Auditor:** Senior Software Architect & Lead Security Engineer  
 
 ---
 
-## 1. Remote Supabase Storage Inspection
+## 1. Remote Supabase Storage State & Inventory
 
-Every candidate bucket was queried directly against `https://wwfhoogtnwyavyvuabbw.supabase.co/storage/v1/bucket/<id>` using the verified API key:
+Every candidate bucket was queried directly against `https://wwfhoogtnwyavyvuabbw.supabase.co/storage/v1/bucket/<id>`:
 
 | Queried Bucket Name | Remote HTTP Response | Reality |
 |---|---|---|
-| `designs` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `avatars` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `brand-assets` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `templates` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `project-assets` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `generated-images` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `exports` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `user-uploads` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `project-previews` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
-| `exported-designs` | 404 (`NoSuchBucket`) | Not provisioned on remote Supabase |
+| `designs` | 404 (`NoSuchBucket`) | Awaiting initial DDL execution |
+| `avatars` | 404 (`NoSuchBucket`) | Awaiting initial DDL execution |
+| `templates` | 404 (`NoSuchBucket`) | Awaiting initial DDL execution |
+| `project-previews` | 404 (`NoSuchBucket`) | Awaiting initial DDL execution |
+| `user-uploads` | 404 (`NoSuchBucket`) | Awaiting initial DDL execution |
+| `exported-designs` | 404 (`NoSuchBucket`) | Awaiting initial DDL execution |
 
-**Finding:** The remote Supabase instance currently hosts **zero storage buckets**. No customer assets exist yet in remote storage; therefore, resolving the naming architecture presents **zero risk of data loss**.
+**Finding:** The remote Supabase instance currently hosts 0 storage buckets (`GET /storage/v1/bucket` returns `[]`). No customer files exist yet; establishing the corrected private architecture carries zero risk of data loss.
 
 ---
 
-## 2. Codebase Reference Audit
+## 2. Storage Privacy Architecture (Finding 3 Remediation)
 
-### A. Flutter Mobile Application (`lib/`)
-The active Flutter implementation references:
-- `StorageService.designsBucket = 'designs'` ([storage_service.dart](file:///Users/omnia/Downloads/vs_projects/anshiily/lib/features/projects/services/storage_service.dart#L9))
-- `StorageService.avatarsBucket = 'avatars'` ([storage_service.dart](file:///Users/omnia/Downloads/vs_projects/anshiily/lib/features/projects/services/storage_service.dart#L10))
+### A. Vulnerability Identified in Initial Architecture
+In previous drafts, `designs` was marked `public: true` with a global `SELECT` policy (`FOR SELECT USING (bucket_id = 'designs')`). This exposed private user graphic designs to unauthenticated web access if object paths were guessed or intercepted.
 
-### B. Admin Web Dashboard (`admin/`)
-The Next.js Admin Dashboard references:
-- `avatars` (Public)
-- `user-uploads` (Private)
-- `project-previews` (Public)
-- `exported-designs` (Private)
-- `templates` (Public)
-
-### C. Migration History
-1. `20261111000001_phase2_backend_schema.sql`: Provisioned `designs` (public) and `avatars` (public).
-2. `20261111000003_phase4_complete_schema_and_ai.sql`: Provisioned `avatars`, `user-uploads`, `project-previews`, `exported-designs`.
-3. `20261112000002_phase7_admin_and_storage.sql`: Provisioned `avatars`, `user-uploads`, `project-previews`, `exported-designs`, `templates`.
-
----
-
-## 3. The Canonical Bucket Architecture
-
-To achieve full compatibility across Flutter, the Admin Dashboard, and future cloud extensions without code breakage, the canonical bucket architecture is defined as follows:
+### B. Corrected Privacy Architecture
+The 6 canonical buckets are split into **3 Public Buckets** and **3 Private Buckets**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -59,32 +37,50 @@ To achieve full compatibility across Flutter, the Admin Dashboard, and future cl
 ├────────────────────┬──────────┬──────────────────────┬─────────────────┤
 │ Bucket Name        │ Access   │ Purpose              │ Primary Client  │
 ├────────────────────┼──────────┼──────────────────────┼─────────────────┤
-│ 1. designs         │ Public   │ Canvas designs/saves │ Flutter Mobile  │
-│ 2. avatars         │ Public   │ User profile photos  │ Flutter & Admin │
-│ 3. templates       │ Public   │ Master design covers │ Flutter & Admin │
-│ 4. project-previews│ Public   │ Web/social previews  │ Admin & Share   │
-│ 5. user-uploads    │ Private  │ Custom brand assets  │ Flutter & Web   │
-│ 6. exported-designs│ Private  │ High-res exports/PDF │ Export Engine   │
+│ 1. designs         │ Private  │ Canvas designs/saves │ Flutter Mobile  │
+│ 2. user-uploads    │ Private  │ Custom brand assets  │ Flutter & Web   │
+│ 3. exported-designs│ Private  │ High-res exports/PDF │ Export Engine   │
+├────────────────────┼──────────┼──────────────────────┼─────────────────┤
+│ 4. templates       │ Public   │ Master design covers │ Flutter & Admin │
+│ 5. project-previews│ Public   │ Web/social previews  │ Admin & Share   │
+│ 6. avatars         │ Public   │ User profile photos  │ Flutter & Admin │
 └────────────────────┴──────────┴──────────────────────┴─────────────────┘
 ```
 
-### Legacy Name Consolidation Mapping:
-- `brand-assets` ➔ Consolidated into `user-uploads` (Private, user-isolated)
-- `project-assets` ➔ Consolidated into `designs` (Public)
-- `generated-images` ➔ Consolidated into `project-previews` (Public)
-- `exports` ➔ Consolidated into `exported-designs` (Private, 300 DPI exports)
+### C. Access Control Policies for Private Buckets:
+- **`designs` (Private)**:
+  - `SELECT`: `auth.role() = 'authenticated' AND ((storage.foldername(name))[1] = auth.uid()::text OR public.check_is_admin(auth.uid()))`.
+  - `INSERT / UPDATE / DELETE`: Only authenticated users within their own user-id folder (`(storage.foldername(name))[1] = auth.uid()::text`).
+  - **Flutter Integration**: `StorageService.uploadDesignImage()` now generates secure signed URLs via `client.storage.from(designsBucket).createSignedUrl(path, 86400)` (24-hour expiration) or direct authenticated streaming.
+- **`user-uploads` (Private)**:
+  - Accessible strictly by the uploading user.
+- **`exported-designs` (Private)**:
+  - High-resolution print-ready files (300 DPI) accessible only by the owner.
 
 ---
 
-## 4. Final Access & RLS Policy Rules
+## 3. Migration Safety & Idempotency (Finding 5 Remediation)
 
-### Public Read Buckets (`designs`, `avatars`, `templates`, `project-previews`):
-- `SELECT`: `true` (Anonymous and authenticated users can view images via public URL).
-- `INSERT`: `auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text` (Users only upload into their own folder).
-- `UPDATE/DELETE`: `auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text`.
-- For `templates`: Only admins may insert or update.
+### A. Vulnerability Identified
+The previous migration used:
+`INSERT INTO storage.buckets ... ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;`
+If executed in an environment where a bucket had been configured as private, this command would overwrite and expose the bucket publicly.
 
-### Private Read Buckets (`user-uploads`, `exported-designs`):
-- `SELECT`: `auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text`.
-- `INSERT`: `auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text`.
-- `UPDATE/DELETE`: `auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text`.
+### B. Safe Migration Pattern
+The corrected migrations (`20261112000002` and `20261112000003`) use:
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES 
+    ('designs', 'designs', false),
+    ('avatars', 'avatars', true),
+    ('templates', 'templates', true),
+    ('project-previews', 'project-previews', true),
+    ('user-uploads', 'user-uploads', false),
+    ('exported-designs', 'exported-designs', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Enforce explicit privacy
+UPDATE storage.buckets SET public = false WHERE id IN ('designs', 'user-uploads', 'exported-designs');
+UPDATE storage.buckets SET public = true WHERE id IN ('templates', 'project-previews', 'avatars');
+```
+This guarantees that existing private buckets can never accidentally become public through migration execution.

@@ -12,7 +12,15 @@ export async function POST(req: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wwfhoogtnwyavyvuabbw.supabase.co';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_uJ2Mq_atmAoIjHuotMi1-A_AxNmxMD3';
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const clientKey = serviceKey || supabaseAnonKey;
+    
+    // If using service key, use it directly; otherwise authenticate with the user's Bearer token
+    const supabase = createClient(supabaseUrl, clientKey, {
+      global: {
+        headers: serviceKey ? {} : { Authorization: `Bearer ${token}` },
+      },
+    });
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {

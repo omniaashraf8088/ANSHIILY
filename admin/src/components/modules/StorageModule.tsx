@@ -11,9 +11,9 @@ export function StorageModule() {
   const buckets = [
     {
       name: 'designs',
-      descriptionAr: 'ملفات وتصاميم المستخدمين المرفوعة من تطبيق الهاتف (Flutter designsBucket)',
-      descriptionEn: 'Mobile app canvas images & design assets (Flutter designsBucket)',
-      isPublic: true,
+      descriptionAr: 'ملفات وتصاميم المستخدمين المرفوعة من تطبيق الهاتف (خاصة ومحمية لكل مستخدم)',
+      descriptionEn: 'Mobile app canvas images & private design assets (User-isolated & protected)',
+      isPublic: false,
       allowedMime: 'image/jpeg, image/png, image/webp',
     },
     {
@@ -56,18 +56,24 @@ export function StorageModule() {
   const bucketSql = `-- ANSHIILY Phase 7 Canonical Storage Setup for wwfhoogtnwyavyvuabbw
 INSERT INTO storage.buckets (id, name, public)
 VALUES 
-    ('designs', 'designs', true),
+    ('designs', 'designs', false),
     ('avatars', 'avatars', true),
     ('templates', 'templates', true),
     ('project-previews', 'project-previews', true),
     ('user-uploads', 'user-uploads', false),
     ('exported-designs', 'exported-designs', false)
-ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage Privacy: User designs MUST remain private
+UPDATE storage.buckets SET public = false WHERE id IN ('designs', 'user-uploads', 'exported-designs');
+UPDATE storage.buckets SET public = true WHERE id IN ('templates', 'project-previews', 'avatars');
 
 -- Storage RLS Policies
 DROP POLICY IF EXISTS "Public can view designs" ON storage.objects;
-CREATE POLICY "Public can view designs" ON storage.objects
-    FOR SELECT USING (bucket_id = 'designs');
+DROP POLICY IF EXISTS "Users can view their own designs" ON storage.objects;
+CREATE POLICY "Users can view their own designs" ON storage.objects
+    FOR SELECT TO authenticated
+    USING (bucket_id = 'designs' AND ((storage.foldername(name))[1] = auth.uid()::text OR public.check_is_admin(auth.uid())));
 
 DROP POLICY IF EXISTS "Public can view avatars" ON storage.objects;
 CREATE POLICY "Public can view avatars" ON storage.objects

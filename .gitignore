@@ -43,3 +43,28 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment variables & secrets (CRITICAL SECURITY)
+.env
+.env.*
+!.env.example
+admin/.env*
+!admin/.env.example
+
+# Native credentials & keystores
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+google-services.json
+GoogleService-Info.plist
+
+# Local caches & artifacts
+admin/.next/
+admin/out/
+supabase/.temp/
+supabase/.branches/
+*.dump
+*.sql.dump
+
