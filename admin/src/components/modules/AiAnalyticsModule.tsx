@@ -154,3 +154,4 @@ export function AiAnalyticsModule({ logs, onRefresh }: AiAnalyticsModuleProps) {
     </div>
   );
 }
+

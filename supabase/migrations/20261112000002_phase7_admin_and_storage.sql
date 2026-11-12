@@ -83,3 +83,4 @@ DO $$ BEGIN
         FOR SELECT USING (true);
 EXCEPTION WHEN others THEN NULL;
 END $$;
+

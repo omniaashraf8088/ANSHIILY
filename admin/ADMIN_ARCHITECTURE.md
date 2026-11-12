@@ -40,3 +40,4 @@ flowchart TD
 2. **Unified Data Layer:**
    - Both Flutter and Next.js connect to the single authoritative Supabase project `wwfhoogtnwyavyvuabbw`.
    - Edits made in the Admin Dashboard (e.g. creating a new category or updating credits) are instantly reflected in the Flutter app.
+

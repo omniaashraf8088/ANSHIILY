@@ -160,3 +160,4 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     </aside>
   );
 }
+

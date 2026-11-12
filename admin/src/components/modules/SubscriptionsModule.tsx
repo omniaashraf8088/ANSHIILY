@@ -116,3 +116,4 @@ export function SubscriptionsModule({ subscriptions, onRefresh }: SubscriptionsM
     </div>
   );
 }
+

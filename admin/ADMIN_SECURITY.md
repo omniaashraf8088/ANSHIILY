@@ -13,3 +13,4 @@
 
 ## 3. Storage Protection
 - Private buckets (`user-uploads`, `exported-designs`) enforce object-level ownership checks preventing unauthorized access.
+

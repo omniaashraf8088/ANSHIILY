@@ -126,3 +126,4 @@ export interface DashboardMetrics {
   totalAiGenerations: number;
   storageBucketsCount: number;
 }
+

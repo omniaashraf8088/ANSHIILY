@@ -223,3 +223,4 @@ export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProp
     </div>
   );
 }
+

@@ -28,3 +28,4 @@
 8. **الملفات والتخزين (Storage & Assets):** إدارة أحواض التخزين السحابي الخمسة (`avatars`, `user-uploads`, `project-previews`, `exported-designs`, `templates`) مع أكواد SQL الجاهزة.
 9. **صلاحيات الإدارة (Admin Roles & RBAC):** دعم 5 مستويات صلاحية (SUPER ADMIN, ADMIN, CONTENT MANAGER, SUPPORT, ANALYST).
 10. **سجل تدقيق النظام (Audit Trail & Health):** متابعة صحة خدمات Supabase PostgREST، GoTrue، Edge Functions، و S3 Storage.
+

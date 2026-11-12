@@ -351,3 +351,4 @@ export function TemplatesModule({ templates, categories, onRefresh }: TemplatesM
     </div>
   );
 }
+
