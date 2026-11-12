@@ -108,3 +108,4 @@ The repository contains all required operational documents for submission:
    - Run `sudo xcodebuild -license` on Mac, open `ios/Runner.xcworkspace`, and archive to TestFlight.
 3. **RevenueCat Dashboard**:
    - Link Google Play Service Account JSON and Apple Shared Secret to sync subscriptions (`anshiily_pro_monthly`, `anshiily_pro_annual`).
+
