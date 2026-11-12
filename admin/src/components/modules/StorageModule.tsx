@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAdmin } from '@/lib/context/AdminContext';
-import { HardDrive, Lock, Globe, Copy, Check, ShieldCheck, Database } from 'lucide-react';
+import { HardDrive, Lock, Globe, Copy, Check, ShieldCheck, Database, Layers } from 'lucide-react';
 
 export function StorageModule() {
   const { t } = useAdmin();
@@ -10,77 +10,98 @@ export function StorageModule() {
 
   const buckets = [
     {
-      name: 'avatars',
-      descriptionAr: 'صور الحسابات والملفات الشخصية للمستخدمين',
-      descriptionEn: 'User profile pictures and avatars',
+      name: 'designs',
+      descriptionAr: 'ملفات وتصاميم المستخدمين المرفوعة من تطبيق الهاتف (Flutter designsBucket)',
+      descriptionEn: 'Mobile app canvas images & design assets (Flutter designsBucket)',
       isPublic: true,
       allowedMime: 'image/jpeg, image/png, image/webp',
     },
     {
-      name: 'user-uploads',
-      descriptionAr: 'ملفات وصور المستخدمين الخاصة المرفوعة للمحرر',
-      descriptionEn: 'User-uploaded brand assets & canvas images',
-      isPublic: false,
+      name: 'avatars',
+      descriptionAr: 'صور الحسابات والملفات الشخصية للمستخدمين (Flutter avatarsBucket)',
+      descriptionEn: 'User profile photos & avatars across Flutter & Web',
+      isPublic: true,
+      allowedMime: 'image/jpeg, image/png, image/webp',
+    },
+    {
+      name: 'templates',
+      descriptionAr: 'صور ومصغرات قوالب أنشئلي الرسمية المعتمدة',
+      descriptionEn: 'Official ANSHIILY verified design templates & covers',
+      isPublic: true,
       allowedMime: 'image/*',
     },
     {
       name: 'project-previews',
-      descriptionAr: 'الصور المصغرة ومعاينات مشاريع التصميم',
-      descriptionEn: 'Project thumbnails and design preview renders',
+      descriptionAr: 'الصور المصغرة ومعاينات مشاريع التصميم للمشاركة والعرض',
+      descriptionEn: 'Project thumbnails and social preview renders',
       isPublic: true,
       allowedMime: 'image/png, image/jpeg',
     },
     {
+      name: 'user-uploads',
+      descriptionAr: 'ملفات وصور العلامات التجارية الخاصة بالمستخدمين (معزولة لكل مستخدم)',
+      descriptionEn: 'User-uploaded brand assets & private canvas uploads',
+      isPublic: false,
+      allowedMime: 'image/*',
+    },
+    {
       name: 'exported-designs',
-      descriptionAr: 'ملفات التصدير النهائية بجودة الطباعة (PNG, JPG, PDF)',
-      descriptionEn: 'Final 300 DPI exports (PNG, JPG, PDF v1.5)',
+      descriptionAr: 'ملفات التصدير النهائية بجودة الطباعة 300 DPI (PDF v1.5, PNG, JPG)',
+      descriptionEn: 'Final 300 DPI high-resolution exports (PDF, PNG, JPG)',
       isPublic: false,
       allowedMime: 'image/png, image/jpeg, application/pdf',
     },
-    {
-      name: 'templates',
-      descriptionAr: 'صور ومصغرات قوالب أنشئلي الرسمية',
-      descriptionEn: 'Official ANSHIILY templates and master covers',
-      isPublic: true,
-      allowedMime: 'image/*',
-    },
   ];
 
-  const bucketSql = `-- ANSHIILY Complete Storage Setup for wwfhoogtnwyavyvuabbw
+  const bucketSql = `-- ANSHIILY Phase 7 Canonical Storage Setup for wwfhoogtnwyavyvuabbw
 INSERT INTO storage.buckets (id, name, public)
 VALUES 
+    ('designs', 'designs', true),
     ('avatars', 'avatars', true),
-    ('user-uploads', 'user-uploads', false),
+    ('templates', 'templates', true),
     ('project-previews', 'project-previews', true),
-    ('exported-designs', 'exported-designs', false),
-    ('templates', 'templates', true)
-ON CONFLICT (id) DO NOTHING;
+    ('user-uploads', 'user-uploads', false),
+    ('exported-designs', 'exported-designs', false)
+ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
 
--- RLS Policies for Storage
-DO $$ BEGIN
-    DROP POLICY IF EXISTS "Public can view avatars" ON storage.objects;
-    CREATE POLICY "Public can view avatars" ON storage.objects
-        FOR SELECT USING (bucket_id = 'avatars');
+-- Storage RLS Policies
+DROP POLICY IF EXISTS "Public can view designs" ON storage.objects;
+CREATE POLICY "Public can view designs" ON storage.objects
+    FOR SELECT USING (bucket_id = 'designs');
 
-    DROP POLICY IF EXISTS "Public can view project previews" ON storage.objects;
-    CREATE POLICY "Public can view project previews" ON storage.objects
-        FOR SELECT USING (bucket_id = 'project-previews');
+DROP POLICY IF EXISTS "Public can view avatars" ON storage.objects;
+CREATE POLICY "Public can view avatars" ON storage.objects
+    FOR SELECT USING (bucket_id = 'avatars');
 
-    DROP POLICY IF EXISTS "Public can view templates" ON storage.objects;
-    CREATE POLICY "Public can view templates" ON storage.objects
-        FOR SELECT USING (bucket_id = 'templates');
+DROP POLICY IF EXISTS "Public can view templates" ON storage.objects;
+CREATE POLICY "Public can view templates" ON storage.objects
+    FOR SELECT USING (bucket_id = 'templates');
 
-    DROP POLICY IF EXISTS "Users can manage user-uploads" ON storage.objects;
-    CREATE POLICY "Users can manage user-uploads" ON storage.objects
-        FOR ALL TO authenticated
-        USING (bucket_id = 'user-uploads' AND (storage.foldername(name))[1] = auth.uid()::text);
+DROP POLICY IF EXISTS "Public can view project previews" ON storage.objects;
+CREATE POLICY "Public can view project previews" ON storage.objects
+    FOR SELECT USING (bucket_id = 'project-previews');
 
-    DROP POLICY IF EXISTS "Users can view exported designs" ON storage.objects;
-    CREATE POLICY "Users can view exported designs" ON storage.objects
-        FOR ALL TO authenticated
-        USING (bucket_id = 'exported-designs' AND (storage.foldername(name))[1] = auth.uid()::text);
-EXCEPTION WHEN others THEN NULL;
-END $$;`;
+DROP POLICY IF EXISTS "Users can upload their own designs" ON storage.objects;
+CREATE POLICY "Users can upload their own designs" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'designs' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+CREATE POLICY "Users can upload their own avatar" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "Users can manage user-uploads" ON storage.objects;
+CREATE POLICY "Users can manage user-uploads" ON storage.objects
+    FOR ALL TO authenticated
+    USING (bucket_id = 'user-uploads' AND (storage.foldername(name))[1] = auth.uid()::text)
+    WITH CHECK (bucket_id = 'user-uploads' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "Users can manage exported designs" ON storage.objects;
+CREATE POLICY "Users can manage exported designs" ON storage.objects
+    FOR ALL TO authenticated
+    USING (bucket_id = 'exported-designs' AND (storage.foldername(name))[1] = auth.uid()::text)
+    WITH CHECK (bucket_id = 'exported-designs' AND (storage.foldername(name))[1] = auth.uid()::text);`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(bucketSql);
@@ -95,12 +116,12 @@ END $$;`;
         <div>
           <h3 className="font-bold text-sm text-[#F6E9D8] flex items-center gap-2">
             <HardDrive className="w-4 h-4 text-[#D4AF37]" />
-            {t('أحواض التخزين السحابي (Supabase Storage)', 'Supabase Cloud Storage Buckets')}
+            {t('أحواض التخزين السحابي المعتمدة (6 Canonical Buckets)', 'Canonical Cloud Storage Buckets (6 Buckets)')}
           </h3>
           <p className="text-xs text-[#F6E9D8]/60 mt-0.5">
             {t(
-              'تهيئة أحواض الصور، المعاينات، وملفات الـ PDF مع سياسات الأمان RLS',
-              'Storage buckets for user assets, thumbnails, and 300 DPI high-res exports'
+              'الأحواض الموحدة بين تطبيق Flutter ومحرر الويب ولوحة الإدارة مع حماية RLS',
+              'Unified bucket architecture shared across Flutter, canvas editor, and Admin Dashboard'
             )}
           </p>
         </div>
@@ -174,4 +195,3 @@ END $$;`;
     </div>
   );
 }
-

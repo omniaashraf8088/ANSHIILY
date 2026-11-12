@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAdmin } from '@/lib/context/AdminContext';
 import { DesignCategory } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import { FolderTree, Plus, Edit2, Trash2, Check, X, Eye, EyeOff } from 'lucide-react';
+import { FolderTree, Plus, Trash2, X, Eye, EyeOff } from 'lucide-react';
 
 interface CategoriesModuleProps {
   categories: DesignCategory[];
@@ -12,9 +12,8 @@ interface CategoriesModuleProps {
 }
 
 export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProps) {
-  const { t, hasPermission } = useAdmin();
+  const { t, hasPermission, currentUser } = useAdmin();
   const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form states
   const [nameAr, setNameAr] = useState('');
@@ -32,14 +31,27 @@ export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProp
     if (!nameAr || !nameEn || !slug) return;
     setLoading(true);
     try {
-      await supabase.from('design_categories').insert({
+      const newSlug = slug.toLowerCase().trim();
+      const { data } = await supabase.from('design_categories').insert({
         name_ar: nameAr,
         name_en: nameEn,
-        slug: slug.toLowerCase().trim(),
+        slug: newSlug,
         icon_name: iconName,
         display_order: displayOrder,
         is_active: true,
-      });
+      }).select().single();
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'CREATE_CATEGORY',
+          target_type: 'design_categories',
+          target_id: data?.id || newSlug,
+          details: { name_ar: nameAr, name_en: nameEn, slug: newSlug },
+        });
+      } catch (_) {}
+
       setNameAr('');
       setNameEn('');
       setSlug('');
@@ -56,6 +68,18 @@ export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProp
     if (!canEdit) return;
     try {
       await supabase.from('design_categories').update({ is_active: !currentStatus }).eq('id', id);
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'TOGGLE_CATEGORY_ACTIVE',
+          target_type: 'design_categories',
+          target_id: id,
+          details: { previous: currentStatus, new: !currentStatus },
+        });
+      } catch (_) {}
+
       onRefresh();
     } catch (err) {
       console.error('Error toggling category', err);
@@ -67,6 +91,18 @@ export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProp
     if (!confirm(t('هل أنت متأكد من حذف هذا القسم؟', 'Are you sure you want to delete this category?'))) return;
     try {
       await supabase.from('design_categories').delete().eq('id', id);
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'DELETE_CATEGORY',
+          target_type: 'design_categories',
+          target_id: id,
+          details: { id },
+        });
+      } catch (_) {}
+
       onRefresh();
     } catch (err) {
       console.error('Error deleting category', err);
@@ -97,7 +133,7 @@ export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProp
         )}
       </div>
 
-      {/* Add Form modal / drawer */}
+      {/* Add Form modal */}
       {isAdding && (
         <form
           onSubmit={handleCreateCategory}
@@ -223,4 +259,3 @@ export function CategoriesModule({ categories, onRefresh }: CategoriesModuleProp
     </div>
   );
 }
-

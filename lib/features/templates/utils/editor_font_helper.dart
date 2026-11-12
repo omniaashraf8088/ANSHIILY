@@ -61,7 +61,9 @@ class EditorFontHelper {
     final family = fontFamily?.toLowerCase().trim() ?? 'tajawal';
 
     // In headless test environments, avoid triggering remote HTTP font downloads
-    if (WidgetsBinding.instance.runtimeType.toString().contains('TestWidgetsFlutterBinding')) {
+    if (WidgetsBinding.instance.runtimeType.toString().contains(
+      'TestWidgetsFlutterBinding',
+    )) {
       return TextStyle(
         fontFamily: family,
         fontSize: fontSize,

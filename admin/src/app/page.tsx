@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/lib/context/AdminContext';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -12,6 +13,7 @@ import {
   AIGenerationLog,
   SystemAuditLog,
   DashboardMetrics,
+  AdminRole,
 } from '@/lib/types';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -27,10 +29,12 @@ import { AdminTeamModule } from '@/components/modules/AdminTeamModule';
 import { AuditLogsModule } from '@/components/modules/AuditLogsModule';
 
 export default function AdminDashboardPage() {
-  const { t } = useAdmin();
+  const router = useRouter();
+  const { t, setCurrentRole } = useAdmin();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Live state
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -43,32 +47,74 @@ export default function AdminDashboardPage() {
 
   const supabase = createClient();
 
+  // 1. Session & Role Verification
+  useEffect(() => {
+    async function verifySession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Check if demo query param is set
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const isDemo = urlParams?.get('demo') === 'true';
+
+        if (!session && !isDemo) {
+          router.push('/login');
+          return;
+        }
+
+        if (session?.user) {
+          // Check role in admin_users
+          const { data: adminRecord } = await supabase
+            .from('admin_users')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (adminRecord?.role) {
+            setCurrentRole(adminRecord.role as AdminRole);
+          }
+        }
+      } catch (err) {
+        console.error('Session verification error:', err);
+      } finally {
+        setAuthChecked(true);
+      }
+    }
+
+    verifySession();
+  }, [router, setCurrentRole, supabase]);
+
+  // 2. Data Fetching
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // 1. Fetch profiles
+      // Profiles
       const { data: profData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
       if (profData) setProfiles(profData);
 
-      // 2. Fetch categories
+      // Categories
       const { data: catData } = await supabase.from('design_categories').select('*').order('display_order', { ascending: true });
       if (catData) setCategories(catData);
 
-      // 3. Fetch templates
+      // Templates
       const { data: tplData } = await supabase.from('design_templates').select('*').order('created_at', { ascending: false });
       if (tplData) setTemplates(tplData);
 
-      // 4. Fetch designs
+      // Designs
       const { data: desData } = await supabase.from('designs').select('*').order('created_at', { ascending: false });
       if (desData) setDesigns(desData);
 
-      // 5. Fetch subscriptions
+      // Subscriptions
       const { data: subData } = await supabase.from('subscriptions').select('*').order('created_at', { ascending: false });
       if (subData) setSubscriptions(subData);
 
-      // 6. Fetch AI logs
+      // AI logs
       const { data: aiData } = await supabase.from('ai_generation_logs').select('*').order('created_at', { ascending: false });
       if (aiData) setAiLogs(aiData);
+
+      // Audit logs
+      const { data: auditData } = await supabase.from('system_audit_logs').select('*').order('created_at', { ascending: false });
+      if (auditData) setAuditLogs(auditData);
     } catch (err) {
       console.error('Error fetching live admin data:', err);
     } finally {
@@ -78,8 +124,10 @@ export default function AdminDashboardPage() {
   }, [supabase]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (authChecked) {
+      fetchData();
+    }
+  }, [authChecked, fetchData]);
 
   // Derived metrics
   const metrics: DashboardMetrics = {
@@ -90,7 +138,7 @@ export default function AdminDashboardPage() {
     totalCategories: categories.length,
     activeSubscriptions: subscriptions.filter((s) => s.status === 'active').length,
     totalAiGenerations: aiLogs.length,
-    storageBucketsCount: 5,
+    storageBucketsCount: 6, // 6 Canonical Buckets
   };
 
   return (
@@ -107,7 +155,7 @@ export default function AdminDashboardPage() {
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
               <div className="w-10 h-10 rounded-full border-2 border-[#D4AF37] border-t-transparent animate-spin"></div>
               <p className="text-xs text-[#F3E5AB] font-mono tracking-wider">
-                {t('جار تحميل بيانات أنشئلي المركزية...', 'Loading ANSHIILY Ecosystem...')}
+                {t('جار التحقق وتحميل بيانات أنشئلي المركزية...', 'Loading Verified ANSHIILY Ecosystem...')}
               </p>
             </div>
           ) : (

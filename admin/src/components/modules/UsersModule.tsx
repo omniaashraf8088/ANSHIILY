@@ -12,7 +12,7 @@ interface UsersModuleProps {
 }
 
 export function UsersModule({ users, onRefresh }: UsersModuleProps) {
-  const { t, hasPermission } = useAdmin();
+  const { t, hasPermission, currentUser } = useAdmin();
   const [searchTerm, setSearchTerm] = useState('');
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
@@ -34,6 +34,18 @@ export function UsersModule({ users, onRefresh }: UsersModuleProps) {
     const newCredits = Math.max(0, currentCredits + delta);
     try {
       await supabase.from('profiles').update({ credits: newCredits }).eq('id', userId);
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'ADJUST_USER_CREDITS',
+          target_type: 'profiles',
+          target_id: userId,
+          details: { previous: currentCredits, new: newCredits, delta },
+        });
+      } catch (_) {}
+
       onRefresh();
     } catch (err) {
       console.error('Error updating credits', err);
@@ -47,6 +59,18 @@ export function UsersModule({ users, onRefresh }: UsersModuleProps) {
     setIsUpdating(userId);
     try {
       await supabase.from('profiles').update({ is_premium: !currentStatus }).eq('id', userId);
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'TOGGLE_PRO_STATUS',
+          target_type: 'profiles',
+          target_id: userId,
+          details: { previous: currentStatus, new: !currentStatus },
+        });
+      } catch (_) {}
+
       onRefresh();
     } catch (err) {
       console.error('Error updating premium status', err);
@@ -181,4 +205,3 @@ export function UsersModule({ users, onRefresh }: UsersModuleProps) {
     </div>
   );
 }
-

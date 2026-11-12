@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
     CREATE POLICY "Public profiles are viewable by everyone"
         ON public.profiles FOR SELECT USING (true);
@@ -33,9 +32,6 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
     CREATE POLICY "Users can update their own profile"
         ON public.profiles FOR UPDATE USING (auth.uid() = id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 3. Projects / Designs Table
 CREATE TABLE IF NOT EXISTS public.designs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,7 +55,6 @@ ALTER TABLE public.designs ADD COLUMN IF NOT EXISTS document_data JSONB DEFAULT 
 
 ALTER TABLE public.designs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can view their own designs or public ones" ON public.designs;
     CREATE POLICY "Users can view their own designs or public ones"
         ON public.designs FOR SELECT
@@ -79,9 +74,6 @@ DO $$ BEGIN
     CREATE POLICY "Users can delete their own designs"
         ON public.designs FOR DELETE
         USING (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- Create projects view for transparent compatibility
 CREATE OR REPLACE VIEW public.projects AS
     SELECT * FROM public.designs;
@@ -101,7 +93,6 @@ CREATE TABLE IF NOT EXISTS public.project_pages (
 
 ALTER TABLE public.project_pages ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can manage pages of their own projects" ON public.project_pages;
     CREATE POLICY "Users can manage pages of their own projects"
         ON public.project_pages FOR ALL
@@ -112,9 +103,6 @@ DO $$ BEGIN
                 AND public.designs.user_id = auth.uid()
             )
         );
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 5. Project Elements Table (Granular Layer/Component Architecture)
 CREATE TABLE IF NOT EXISTS public.project_elements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -136,7 +124,6 @@ CREATE TABLE IF NOT EXISTS public.project_elements (
 
 ALTER TABLE public.project_elements ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can manage elements of their own projects" ON public.project_elements;
     CREATE POLICY "Users can manage elements of their own projects"
         ON public.project_elements FOR ALL
@@ -147,9 +134,6 @@ DO $$ BEGIN
                 AND public.designs.user_id = auth.uid()
             )
         );
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 6. Design Categories Table
 CREATE TABLE IF NOT EXISTS public.design_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -167,14 +151,10 @@ CREATE TABLE IF NOT EXISTS public.design_categories (
 
 ALTER TABLE public.design_categories ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Active design categories are viewable by everyone" ON public.design_categories;
     CREATE POLICY "Active design categories are viewable by everyone"
         ON public.design_categories FOR SELECT
         USING (is_active = true);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 7. Design Templates Table
 CREATE TABLE IF NOT EXISTS public.design_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -199,14 +179,10 @@ CREATE TABLE IF NOT EXISTS public.design_templates (
 
 ALTER TABLE public.design_templates ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Public templates are viewable by everyone" ON public.design_templates;
     CREATE POLICY "Public templates are viewable by everyone"
         ON public.design_templates FOR SELECT
         USING (true);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 8. User Uploads Table
 CREATE TABLE IF NOT EXISTS public.user_uploads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -222,14 +198,10 @@ CREATE TABLE IF NOT EXISTS public.user_uploads (
 
 ALTER TABLE public.user_uploads ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can manage their own uploads" ON public.user_uploads;
     CREATE POLICY "Users can manage their own uploads"
         ON public.user_uploads FOR ALL
         USING (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 9. Subscriptions Table
 CREATE TABLE IF NOT EXISTS public.subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -243,14 +215,10 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can view their own subscription" ON public.subscriptions;
     CREATE POLICY "Users can view their own subscription"
         ON public.subscriptions FOR SELECT
         USING (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 10. Export Jobs Table
 CREATE TABLE IF NOT EXISTS public.export_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -265,14 +233,10 @@ CREATE TABLE IF NOT EXISTS public.export_jobs (
 
 ALTER TABLE public.export_jobs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can view and create their own export jobs" ON public.export_jobs;
     CREATE POLICY "Users can view and create their own export jobs"
         ON public.export_jobs FOR ALL
         USING (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 11. Human Assistance Requests Table
 CREATE TABLE IF NOT EXISTS public.human_assistance_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -287,14 +251,10 @@ CREATE TABLE IF NOT EXISTS public.human_assistance_requests (
 
 ALTER TABLE public.human_assistance_requests ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can manage their own assistance requests" ON public.human_assistance_requests;
     CREATE POLICY "Users can manage their own assistance requests"
         ON public.human_assistance_requests FOR ALL
         USING (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 12. Notifications Table
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -309,14 +269,10 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can manage their own notifications" ON public.notifications;
     CREATE POLICY "Users can manage their own notifications"
         ON public.notifications FOR ALL
         USING (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 13. AI Generation Usage Tracking Table
 CREATE TABLE IF NOT EXISTS public.ai_generation_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -334,7 +290,6 @@ CREATE TABLE IF NOT EXISTS public.ai_generation_logs (
 
 ALTER TABLE public.ai_generation_logs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can view their own AI generation logs" ON public.ai_generation_logs;
     CREATE POLICY "Users can view their own AI generation logs"
         ON public.ai_generation_logs FOR SELECT
@@ -344,9 +299,6 @@ DO $$ BEGIN
     CREATE POLICY "Users can insert their own AI generation logs"
         ON public.ai_generation_logs FOR INSERT
         WITH CHECK (auth.uid() = user_id);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-
 -- 14. Provision Storage Buckets
 INSERT INTO storage.buckets (id, name, public)
 VALUES 
@@ -357,7 +309,6 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage Policies for user-uploads (Private, user-isolated)
-DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can upload their own files" ON storage.objects;
     CREATE POLICY "Users can upload their own files"
         ON storage.objects FOR INSERT
@@ -369,6 +320,3 @@ DO $$ BEGIN
         ON storage.objects FOR SELECT
         TO authenticated
         USING (bucket_id = 'user-uploads' AND (storage.foldername(name))[1] = auth.uid()::text);
-EXCEPTION WHEN others THEN NULL;
-END $$;
-

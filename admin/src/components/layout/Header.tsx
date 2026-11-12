@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/lib/context/AdminContext';
 import { AdminRole } from '@/lib/types';
-import { Globe, Shield, RefreshCw } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { Globe, Shield, RefreshCw, LogOut, Info } from 'lucide-react';
 
 interface HeaderProps {
   onRefresh?: () => void;
@@ -11,6 +13,8 @@ interface HeaderProps {
 }
 
 export function Header({ onRefresh, isRefreshing }: HeaderProps) {
+  const router = useRouter();
+  const supabase = createClient();
   const { lang, setLang, t, currentRole, setCurrentRole, currentUser } = useAdmin();
 
   const roles: { id: AdminRole; label: string }[] = [
@@ -21,10 +25,17 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
     { id: 'ANALYST', label: 'Analyst (محلل البيانات)' },
   ];
 
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (_) {}
+    router.push('/login');
+  };
+
   return (
     <header className="h-16 bg-[#0B132B]/95 backdrop-blur border-b border-[#D4AF37]/20 px-6 flex items-center justify-between sticky top-0 z-40">
       {/* Brand & Slogan */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <span className="text-xs uppercase tracking-widest text-[#D4AF37]/80 font-mono hidden md:inline">
           {t('من فكرة إلى تصميم', 'From Idea to Design')}
         </span>
@@ -44,13 +55,20 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
           </button>
         )}
 
-        {/* Role Selector */}
-        <div className="flex items-center gap-2 bg-[#111C3D] px-3 py-1.5 rounded-lg border border-[#D4AF37]/20 text-xs">
-          <Shield className="w-3.5 h-3.5 text-[#D4AF37]" />
+        {/* UI Role Simulator Indicator */}
+        <div className="flex items-center gap-2 bg-[#111C3D] px-3 py-1.5 rounded-lg border border-[#D4AF37]/30 text-xs">
+          <div className="flex items-center gap-1 text-[10px] text-[#D4AF37] font-semibold">
+            <Shield className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">{t('محاكاة العرض:', 'UI Simulator:')}</span>
+          </div>
           <select
             value={currentRole}
             onChange={(e) => setCurrentRole(e.target.value as AdminRole)}
             className="bg-transparent text-[#F6E9D8] focus:outline-none cursor-pointer text-xs font-medium"
+            title={t(
+              'تغيير الدور لتجربة الصلاحيات البصرية في لوحة التحكم (لا يمنح صلاحيات خادم)',
+              'Switch role to preview UI visibility. Does not bypass server RLS.'
+            )}
           >
             {roles.map((r) => (
               <option key={r.id} value={r.id} className="bg-[#0B132B] text-[#F6E9D8]">
@@ -69,18 +87,15 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
           <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
         </button>
 
-        {/* Admin Avatar */}
-        <div className="flex items-center gap-2.5 ps-3 border-s border-[#D4AF37]/20">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#7A0E2C] to-[#D4AF37] flex items-center justify-center font-bold text-xs text-[#0B132B]">
-            SA
-          </div>
-          <div className="hidden lg:block text-start">
-            <p className="text-xs font-semibold text-[#F6E9D8] leading-tight">Omnia Ashraf</p>
-            <p className="text-[10px] text-[#D4AF37]/80">{currentUser.role}</p>
-          </div>
-        </div>
+        {/* Sign Out Button */}
+        <button
+          onClick={handleSignOut}
+          title={t('تسجيل الخروج', 'Sign Out')}
+          className="p-2 rounded-lg bg-[#111C3D] border border-rose-500/30 text-rose-300 hover:bg-rose-500/20 transition-all flex items-center gap-1"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </header>
   );
 }
-

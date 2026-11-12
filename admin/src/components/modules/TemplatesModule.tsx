@@ -13,7 +13,7 @@ interface TemplatesModuleProps {
 }
 
 export function TemplatesModule({ templates, categories, onRefresh }: TemplatesModuleProps) {
-  const { t, hasPermission } = useAdmin();
+  const { t, hasPermission, currentUser } = useAdmin();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewDoc, setPreviewDoc] = useState<DesignTemplate | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -71,7 +71,7 @@ export function TemplatesModule({ templates, categories, onRefresh }: TemplatesM
         ],
       };
 
-      await supabase.from('design_templates').insert({
+      const { data } = await supabase.from('design_templates').insert({
         name_ar: nameAr,
         name_en: nameEn,
         category_slug: catSlug,
@@ -82,7 +82,18 @@ export function TemplatesModule({ templates, categories, onRefresh }: TemplatesM
         is_premium: isPro,
         is_featured: isFeatured,
         document_data: defaultDocumentData,
-      });
+      }).select().single();
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'CREATE_TEMPLATE',
+          target_type: 'design_templates',
+          target_id: data?.id || nameAr,
+          details: { name_ar: nameAr, name_en: nameEn, category: catSlug, is_pro: isPro },
+        });
+      } catch (_) {}
 
       setNameAr('');
       setNameEn('');
@@ -99,6 +110,18 @@ export function TemplatesModule({ templates, categories, onRefresh }: TemplatesM
     if (!canEdit) return;
     try {
       await supabase.from('design_templates').update({ is_premium: !current }).eq('id', id);
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'TOGGLE_TEMPLATE_PREMIUM',
+          target_type: 'design_templates',
+          target_id: id,
+          details: { previous: current, new: !current },
+        });
+      } catch (_) {}
+
       onRefresh();
     } catch (err) {
       console.error('Error updating template', err);
@@ -110,6 +133,18 @@ export function TemplatesModule({ templates, categories, onRefresh }: TemplatesM
     if (!confirm(t('حذف هذا القالب نهائياً؟', 'Delete this template permanently?'))) return;
     try {
       await supabase.from('design_templates').delete().eq('id', id);
+
+      // Audit Log
+      try {
+        await supabase.from('system_audit_logs').insert({
+          actor_email: currentUser.email,
+          action: 'DELETE_TEMPLATE',
+          target_type: 'design_templates',
+          target_id: id,
+          details: { id },
+        });
+      } catch (_) {}
+
       onRefresh();
     } catch (err) {
       console.error('Error deleting template', err);
@@ -351,4 +386,3 @@ export function TemplatesModule({ templates, categories, onRefresh }: TemplatesM
     </div>
   );
 }
-

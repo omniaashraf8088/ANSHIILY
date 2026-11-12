@@ -170,4 +170,3 @@ class CustomerSubscription {
 
   bool get isPremiumActive => tier == SubscriptionTier.premium && isActive;
 }
-
